@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>영화 상세 정보 | TAEHEON MOVIE</title>
+    <style>
+        body { background-color: #141414; color: white; font-family: 'Pretendard', sans-serif; padding: 40px; margin: 0; }
+        .back-btn { background: #E50914; color: white; border: none; padding: 10px 20px; cursor: pointer; border-radius: 5px; margin-bottom: 20px; font-weight: bold; }
+        .detail-container { max-width: 900px; margin: auto; display: flex; gap: 40px; background: #1f1f1f; padding: 30px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .detail-container img { width: 300px; border-radius: 10px; object-fit: cover; background: #333; }
+        .info h1 { color: #fff; margin-top: 0; font-size: 2.5rem; }
+        .info p { line-height: 1.6; color: #ccc; }
+        .review-section { max-width: 900px; margin: 40px auto; padding: 25px; background: #1a1a1a; border-radius: 15px; }
+        .comment-form { display: flex; gap: 10px; margin-bottom: 30px; }
+        .comment-input { flex: 1; padding: 12px; border-radius: 5px; border: 1px solid #333; background: #222; color: white; }
+        .post-btn { padding: 12px 25px; background: #E50914; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        .comment-item { border-bottom: 1px solid #333; padding: 15px 0; animation: fadeIn 0.5s ease; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    </style>
+</head>
+<body>
+    <div style="max-width: 900px; margin: auto;">
+        <button class="back-btn" onclick="location.href='index.html'">← 목록으로 돌아가기</button>
+    </div>
+    
+    <div id="movie-detail" class="detail-container">
+        <p>영화 정보를 불러오는 중입니다...</p>
+    </div>
+
+    <div class="review-section">
+        <h3>🎬 관람평 남기기</h3>
+        <div class="comment-form">
+            <input type="text" id="user-comment" class="comment-input" placeholder="영화는 어떠셨나요?">
+            <select id="rating" style="padding: 10px; border-radius: 5px; background: #222; color: white; border: 1px solid #333;">
+                <option value="5">⭐⭐⭐⭐⭐</option>
+                <option value="4">⭐⭐⭐⭐</option>
+                <option value="3">⭐⭐⭐</option>
+                <option value="2">⭐⭐</option>
+                <option value="1">⭐</option>
+            </select>
+            <button class="post-btn" onclick="postComment()">등록</button>
+        </div>
+        <div id="comment-list"></div>
+    </div>
+
+    <script>
+        // ⚠️ 본인의 API 게이트웨이 호출 URL (마지막에 / 꼭 확인!)
+        const API_URL = "https://5s69ymb9h7.execute-api.ap-northeast-2.amazonaws.com/prod/";
+        const urlParams = new URLSearchParams(window.location.search);
+        const movieId = urlParams.get('id'); // URL에서 ?id=... 값을 가져옴
+
+        async function fetchDetail() {
+            if (!movieId) {
+                document.getElementById('movie-detail').innerText = "잘못된 접근입니다.";
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}?detail=${movieId}`);
+                const data = await response.json();
+                
+                console.log("받은 데이터:", data); // 디버깅용
+
+                // 1. 영화 정보 랜더링 (data.movie가 있는지 확인)
+                if (data.movie && data.movie.PK) {
+                    document.getElementById('movie-detail').innerHTML = `
+                        <img src="${data.movie.poster_url || 'https://via.placeholder.com/300x450?text=No+Poster'}" alt="포스터">
+                        <div class="info">
+                            <h1>${data.movie.title || '제목 없음'}</h1>
+                            <p style="font-size: 1.3rem; color: #ffb400;">평점 ⭐ ${data.avg_score || '0.0'}</p>
+                            <hr style="border: 0.5px solid #333; margin: 20px 0;">
+                            <p>${data.movie.description || '영화 설명 정보가 등록되지 않았습니다.'}</p>
+                        </div>
+                    `;
+                } else {
+                    document.getElementById('movie-detail').innerHTML = "<p>영화 정보를 찾을 수 없습니다.</p>";
+                }
+
+                // 2. 댓글 목록 랜더링 (data.comments가 배열인지 확인)
+                const commentList = document.getElementById('comment-list');
+                if (data.comments && data.comments.length > 0) {
+                    commentList.innerHTML = data.comments.map(c => `
+                        <div class="comment-item">
+                            <p style="margin: 0; font-size: 1.1rem;">💬 ${c.content || '내용 없음'}</p>
+                            <p style="margin: 8px 0 0 0; color: #aaa; font-size: 0.85rem;">
+                                평점 ${'⭐'.repeat(parseInt(c.rating) || 0)} | ${c.reg_date ? c.reg_date.substring(0, 10) : ''}
+                            </p>
+                        </div>
+                    `).join('');
+                } else {
+                    commentList.innerHTML = "<p style='color: #666; text-align: center; padding: 20px;'>첫 번째 리뷰를 남겨주세요! ✍️</p>";
+                }
+
+            } catch (error) {
+                console.error("데이터 로딩 중 에러:", error);
+                document.getElementById('movie-detail').innerText = "데이터를 불러오는 중 오류가 발생했습니다.";
+            }
+        }
+
+        async function postComment() {
+            const commentVal = document.getElementById('user-comment').value;
+            const ratingVal = document.getElementById('rating').value;
+
+            if(!commentVal) return alert("리뷰 내용을 입력해주세요!");
+
+            try {
+                const response = await fetch(`${API_URL}?movie_id=${movieId}&comment=true`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({ 
+                        'content': commentVal, // 람다와 이름 맞춤
+                        'rating': ratingVal 
+                    })
+                });
+
+                if(response.ok) {
+                    alert("리뷰가 등록되었습니다!");
+                    location.reload();
+                } else {
+                    alert("등록에 실패했습니다.");
+                }
+            } catch (e) {
+                console.error("POST 에러:", e);
+                alert("서버 통신 오류");
+            }
+        }
+
+        // 페이지 로드 시 실행
+        fetchDetail();
+    </script>
+</body>
+</html>
