@@ -1,0 +1,20 @@
+{
+  "PK": {
+    "S": "MOVIE#random_02"
+  },
+  "SK": {
+    "S": "METADATA"
+  },
+  "description": {
+    "S": "영화 설명입니다."
+  },
+  "poster_url": {
+    "S": "https://s3.ap-northeast-2.amazonaws.com/kimtaeheon.store/posters/1518_68.webp"  (이미지 주소)
+  },
+  "reg_date": {
+    "S": "2026-03-14"
+  },
+  "title": {
+    "S": "스즈메의 문단속"
+  }
+}
